@@ -4,6 +4,7 @@ import NavBar from "./components/NavBar";
 import Maps from "./routes/Map";
 import SignupPage from "./routes/Signup";
 import LoginPage from "./routes/Login";
+import { Box } from "@mui/material";
 
 function App() {
   const routes = useRoutes([
@@ -26,10 +27,10 @@ function App() {
   ]);
 
   return (
-    <div>
+    <Box>
       <NavBar />
       {routes}
-    </div>
+    </Box>
   );
 }
 

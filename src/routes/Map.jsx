@@ -57,7 +57,7 @@ const MapWithForm = () => {
   const MapClickHandler = () => {
     useMapEvents({
       click(e) {
-        setFormData({ ...formData, lat: e.latlng.lat, lng: e.latlng.lng }); // Store click coordinates
+        setFormData({ ...formData, lat: e.latlng.lat, lng: e.latlng.lng });
         setFormOpen(true);
       },
     });
@@ -245,7 +245,7 @@ const MapWithForm = () => {
               <Button variant="contained" color="primary" type="submit">
                 Save
               </Button>
-              <Button variant="outlined" onClick={() => setFormOpen(false)}>
+              <Button variant="contained" onClick={() => setFormOpen(false)}>
                 Cancel
               </Button>
             </Box>

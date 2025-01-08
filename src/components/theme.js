@@ -3,10 +3,15 @@ import { createTheme } from "@mui/material";
 export const theme = createTheme({
   palette: {
     primary: {
-      main: "#1976d2",
+      main: "#F0FDFA",
     },
     secondary: {
       main: "#dc004e",
     },
+  },
+  typography: {
+    // fontFamily: "Playwrite AU SA",
+    fontFamily: "Montserrat",
+    // fontFamily: "Inter",
   },
 });
