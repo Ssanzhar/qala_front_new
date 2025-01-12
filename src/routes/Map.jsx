@@ -23,6 +23,7 @@ import ThumbUpIcon from "@mui/icons-material/ThumbUp";
 import ThumbDownIcon from "@mui/icons-material/ThumbDown";
 import { GlobalContext } from "../context/GlobalContext";
 import { data } from "../data/data";
+import { useAuth } from "../context/AuthProvider";
 
 const MapUpdater = ({ marker }) => {
   const map = useMap();
@@ -37,27 +38,42 @@ const MapUpdater = ({ marker }) => {
 };
 
 const MapWithForm = () => {
+  const { access } = useAuth();
   const { city } = useContext(GlobalContext);
   const [formOpen, setFormOpen] = useState(false);
   const [vote, setVote] = useState(null);
   const [upvotes, setUpvotes] = useState(432);
   const [downvotes, setDownvotes] = useState(123);
   const [formData, setFormData] = useState({
-    lat: null,
-    lng: null,
-    title: "",
+    name: "",
     description: "",
+    latitude: null,
+    longitude: null,
     image: null,
+    city: city ? data[city]?.id : 1,
   });
   const [markers, setMarkers] = useState([]);
   const marker = city
     ? [data[city]["latitude"], data[city]["longitude"]]
     : [43.222, 76.851];
 
+  useEffect(() => {
+    if (city) {
+      setFormData((prevData) => ({
+        ...prevData,
+        city: data[city].id,
+      }));
+    }
+  }, [city]);
+
   const MapClickHandler = () => {
     useMapEvents({
       click(e) {
-        setFormData({ ...formData, lat: e.latlng.lat, lng: e.latlng.lng });
+        setFormData({
+          ...formData,
+          latitude: e.latlng.lat,
+          longitude: e.latlng.lng,
+        });
         setFormOpen(true);
       },
     });
@@ -73,19 +89,59 @@ const MapWithForm = () => {
     setFormData((prev) => ({ ...prev, image: e.target.files[0] }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setMarkers((prev) => [...prev, { ...formData, votes: 0 }]);
-    console.log(formData);
-    console.log(markers);
-    setFormOpen(false);
-    setFormData({
-      lat: null,
-      lng: null,
-      title: "",
-      description: "",
-      image: null,
-    });
+
+    const formDataToSend = new FormData();
+    formDataToSend.append("name", formData.name);
+    formDataToSend.append("description", formData.description);
+    formDataToSend.append("latitude", formData.latitude);
+    formDataToSend.append("longitude", formData.longitude);
+    formDataToSend.append("image", formData.image);
+    formDataToSend.append("city", formData.city);
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/events/", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${access}`,
+        },
+        body: formDataToSend,
+      });
+
+      console.log(formDataToSend);
+      console.log(formData);
+
+      const data = await response.json();
+      console.log("Event created successfully", data);
+
+      if (data.ok) {
+        if (data.ok) {
+          const newMarker = {
+            name: formData.name,
+            description: formData.description,
+            latitude: formData.latitude,
+            longitude: formData.longitude,
+            image: formData.image,
+            city: formData.city,
+          };
+          setMarkers((prev) => [...prev, newMarker]);
+          console.log("Markers after addition: ", markers); // Log to check
+        }
+      }
+
+      setFormOpen(false);
+      setFormData({
+        name: "",
+        description: "",
+        latitude: null,
+        longitude: null,
+        image: null,
+        city: city ? data[city]?.id : 1,
+      });
+    } catch (error) {
+      console.error("Error creating event:", error);
+    }
   };
 
   const sendVoteToBackend = async (voteType) => {
@@ -147,7 +203,7 @@ const MapWithForm = () => {
         <MapContainer
           center={[43.222, 76.851]}
           zoom={13}
-          style={{ height: "91.5vh", width: "202vh" }}
+          style={{ height: "93.6vh", width: "202vh" }}
         >
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -156,18 +212,21 @@ const MapWithForm = () => {
           <MapUpdater marker={marker} />
           <MapClickHandler />
           {markers.map((marker, index) => (
-            <Marker key={index} position={[marker.lat, marker.lng]}>
+            <Marker key={index} position={[marker.latitude, marker.longitude]}>
               <Popup>
-                <Typography variant="h6">{marker.title}</Typography>
-                <Typography variant="body2">{marker.description}</Typography>
+                <Typography variant="h6">Name: {marker.name}</Typography>
+                <Typography variant="body2">
+                  Description: {marker.description}
+                </Typography>
                 {marker.image && (
                   <img
                     src={URL.createObjectURL(marker.image)}
-                    alt={marker.title}
-                    style={{ width: "100px", height: "auto", marginTop: "8px" }}
+                    alt={marker.name}
+                    style={{ width: "200px", height: "auto", marginTop: "8px" }}
                   />
                 )}
                 <Box sx={{ mt: 2, display: "flex", alignItems: "center" }}>
+                  <Typography variant="h6">Votes: </Typography>
                   <IconButton
                     aria-label="like"
                     onClick={handleUpvote}
@@ -209,14 +268,14 @@ const MapWithForm = () => {
           }}
         >
           <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
-            Add Marker Details
+            Add Event Details
           </Typography>
           <form onSubmit={handleSubmit}>
             <TextField
-              label="Title"
-              name="title"
+              label="Name"
+              name="name"
               fullWidth
-              value={formData.title}
+              value={formData.name}
               onChange={handleInputChange}
               required
               sx={{ mb: 2 }}
@@ -245,7 +304,7 @@ const MapWithForm = () => {
               <Button variant="contained" color="primary" type="submit">
                 Save
               </Button>
-              <Button variant="contained" onClick={() => setFormOpen(false)}>
+              <Button variant="contained" onClick={() => setFormOpen()}>
                 Cancel
               </Button>
             </Box>

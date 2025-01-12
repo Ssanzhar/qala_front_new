@@ -17,7 +17,6 @@ const SignupPage = () => {
     email: "",
     password: "",
   });
-
   const [errors, setErrors] = useState({});
 
   const handleChange = (e) => {
@@ -30,32 +29,44 @@ const SignupPage = () => {
 
   const validateForm = () => {
     const newErrors = {};
-
-    if (!formData.username.trim()) {
-      newErrors.username = "Username is required";
-    }
-
+    if (!formData.username.trim()) newErrors.username = "Username is required";
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Email is invalid";
     }
-
     if (!formData.password) {
       newErrors.password = "Password is required";
     } else if (formData.password.length < 6) {
       newErrors.password = "Password must be at least 6 characters long";
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const postSignup = async (data) => {
+    const response = await fetch("http://127.0.0.1:8000/api/signup/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Signup failed");
+    }
+    return response.json();
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (validateForm()) {
-      console.log("Form submitted:", formData);
-      setFormData({ username: "", email: "", password: "" });
+      try {
+        await postSignup(formData);
+        alert("Signup successful! Tokens retrieved.");
+        setFormData({ username: "", email: "", password: "" });
+      } catch (error) {
+        setErrors({ general: error.message });
+      }
     }
   };
 
@@ -65,7 +76,7 @@ const SignupPage = () => {
       <Container component="main" maxWidth="xs">
         <Paper elevation={3} sx={{ mt: 8, p: 4 }}>
           <Typography component="h1" variant="h5" align="center">
-            Signup
+            Sign Up
           </Typography>
           <Box
             component="form"
@@ -122,6 +133,11 @@ const SignupPage = () => {
             >
               Sign up
             </Button>
+            {errors.general && (
+              <Typography color="error" align="center">
+                {errors.general}
+              </Typography>
+            )}
           </Box>
         </Paper>
       </Container>

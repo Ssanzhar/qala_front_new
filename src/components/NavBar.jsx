@@ -14,10 +14,12 @@ import {
 } from "@mui/material";
 import { Link } from "react-router-dom";
 import { GlobalContext } from "../context/GlobalContext";
+import { useAuth } from "../context/AuthProvider";
 import { theme } from "./theme";
 
 const NavBar = () => {
   const { city, setCity } = useContext(GlobalContext);
+  const { access, logout } = useAuth();
   const cities = ["Almaty", "Astana", "Shymkent", "Karaganda", "Aktobe"];
 
   const handleCity = (e) => {
@@ -62,12 +64,25 @@ const NavBar = () => {
             <Button component={Link} to="/map" color="inherit">
               Map
             </Button>
-            <Button component={Link} to="/login" color="inherit">
-              Log In
-            </Button>
-            <Button component={Link} to="/signup" color="inherit">
-              Sign Up
-            </Button>
+            {access ? (
+              <>
+                <Button component={Link} to="/profile" color="inherit">
+                  Profile
+                </Button>
+                <Button color="inherit" onClick={logout}>
+                  Log Out
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button component={Link} to="/login" color="inherit">
+                  Log In
+                </Button>
+                <Button component={Link} to="/signup" color="inherit">
+                  Sign Up
+                </Button>
+              </>
+            )}
           </Box>
         </Toolbar>
       </AppBar>

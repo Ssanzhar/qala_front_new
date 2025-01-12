@@ -10,20 +10,34 @@ import {
 import ThumbUpIcon from "@mui/icons-material/ThumbUp";
 import ThumbDownIcon from "@mui/icons-material/ThumbDown";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
+import { useAuth } from "../context/AuthProvider";
 
-const EventCard = ({ title, date, description, image, location, eventId }) => {
+const EventCard = ({
+  title,
+  date,
+  description,
+  image,
+  location,
+  id,
+  pvotes,
+  nvotes,
+}) => {
   const [vote, setVote] = useState(null);
-  const [upvotes, setUpvotes] = useState(432);
-  const [downvotes, setDownvotes] = useState(123);
+  const [upvotes, setUpvotes] = useState(pvotes);
+  const [downvotes, setDownvotes] = useState(nvotes);
+  const { access } = useAuth();
 
-  const sendVoteToBackend = async (voteType) => {
+  const sendVoteToBackend = async (voteType, id) => {
     try {
-      const response = await fetch("https://your-backend-url.com/api/votes", {
+      const response = await fetch("http://127.0.0.1:8000/api/votes/", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${access}`,
+        },
         body: JSON.stringify({
-          eventId,
-          voteType,
+          event: id,
+          vote_type: voteType,
         }),
       });
 
@@ -41,12 +55,12 @@ const EventCard = ({ title, date, description, image, location, eventId }) => {
     if (vote === "upvote") {
       setVote(null);
       setUpvotes((prev) => prev - 1);
-      sendVoteToBackend("remove");
+      sendVoteToBackend("positive", id);
     } else {
       setVote("upvote");
       setUpvotes((prev) => prev + 1);
       if (vote === "downvote") setDownvotes((prev) => prev - 1);
-      sendVoteToBackend("upvote");
+      sendVoteToBackend("negative", id);
     }
   };
 
@@ -54,12 +68,12 @@ const EventCard = ({ title, date, description, image, location, eventId }) => {
     if (vote === "downvote") {
       setVote(null);
       setDownvotes((prev) => prev - 1);
-      sendVoteToBackend("remove");
+      sendVoteToBackend("negative", id);
     } else {
       setVote("downvote");
       setDownvotes((prev) => prev + 1);
       if (vote === "upvote") setUpvotes((prev) => prev - 1);
-      sendVoteToBackend("downvote");
+      sendVoteToBackend("positive", id);
     }
   };
 

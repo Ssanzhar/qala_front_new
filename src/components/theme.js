@@ -10,8 +10,6 @@ export const theme = createTheme({
     },
   },
   typography: {
-    // fontFamily: "Playwrite AU SA",
     fontFamily: "Montserrat",
-    // fontFamily: "Inter",
   },
 });

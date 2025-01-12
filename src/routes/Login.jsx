@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import {
   Box,
   Button,
@@ -10,15 +10,16 @@ import {
   CssBaseline,
 } from "@mui/material";
 import { theme } from "../components/theme";
+import { GlobalContext } from "../context/GlobalContext";
+import { useAuth } from "../context/AuthProvider";
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({
     username: "",
-    email: "",
     password: "",
   });
-
   const [errors, setErrors] = useState({});
+  const { login } = useAuth();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -31,14 +32,8 @@ const LoginPage = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.username.trim()) {
+    if (!formData.username || !formData.username.trim()) {
       newErrors.username = "Username is required";
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Email is invalid";
     }
 
     if (!formData.password) {
@@ -51,11 +46,14 @@ const LoginPage = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (validateForm()) {
-      console.log("Form submitted:", formData);
-      setFormData({ username: "", email: "", password: "" });
+    if (!validateForm()) return;
+
+    try {
+      await login(formData.username, formData.password);
+    } catch (error) {
+      console.error("Login failed:", error.message);
     }
   };
 
