@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -13,6 +13,7 @@ import {
   CssBaseline,
 } from "@mui/material";
 import { theme } from "../components/theme";
+import { useAuth } from "../context/AuthProvider";
 
 const userAccount = {
   name: "John Doe",
@@ -20,15 +21,32 @@ const userAccount = {
   profilePic: "https://randomuser.me/api/portraits/men/46.jpg",
 };
 
-const events = [
-  { id: 1, name: "Event 1", type: "upvoted" },
-  { id: 2, name: "Event 2", type: "downvoted" },
-  { id: 3, name: "Event 3", type: "upvoted" },
-];
-
 const AccountDashboard = () => {
   const [user, setUser] = useState(userAccount);
-  const [eventsData, setEventsData] = useState(events);
+  const [eventsData, setEventsData] = useState([]);
+  const { access } = useAuth();
+
+  const getUser = async () => {
+    const response = await fetch("http://127.0.0.1:8000/api/user-events/", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${access}`,
+      },
+    });
+
+    const result = await response.json();
+
+    return result;
+  };
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      const data = await getUser();
+      setEventsData(data);
+    };
+
+    fetchEvents();
+  }, [access]);
 
   return (
     <ThemeProvider theme={theme}>
@@ -56,9 +74,20 @@ const AccountDashboard = () => {
                   <ListItemText
                     primary={event.name}
                     secondary={
-                      event.type === "upvoted"
-                        ? "You Upvoted this event"
-                        : "You Downvoted this event"
+                      <>
+                        <Typography variant="body2">
+                          {event.type === "upvoted"
+                            ? "You Upvoted this event"
+                            : "You Downvoted this event"}
+                        </Typography>
+                        <Typography variant="body2">
+                          Location: {event.location}, {event.city}
+                        </Typography>
+                        <Typography variant="body2">
+                          Upvotes: {event.upvotes} | Downvotes:{" "}
+                          {event.downvotes}
+                        </Typography>
+                      </>
                     }
                   />
                 </ListItem>

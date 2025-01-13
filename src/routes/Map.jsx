@@ -126,7 +126,7 @@ const MapWithForm = () => {
             city: formData.city,
           };
           setMarkers((prev) => [...prev, newMarker]);
-          console.log("Markers after addition: ", markers); // Log to check
+          console.log("Markers after addition: ", markers);
         }
       }
 
@@ -144,13 +144,14 @@ const MapWithForm = () => {
     }
   };
 
-  const sendVoteToBackend = async (voteType) => {
+  const sendVoteToBackend = async (voteType, id) => {
     try {
-      const response = await fetch("https://your-backend-url.com/api/votes", {
+      const response = await fetch("http://127.0.0.1:8000/api/votes/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          voteType,
+          event: id,
+          vote_type: voteType === "positive" ? "positive" : "negative",
         }),
       });
 
