@@ -27,7 +27,7 @@ const EventCard = ({
   const [downvotes, setDownvotes] = useState(nvotes);
   const { access } = useAuth();
 
-  const sendVoteToBackend = async (voteType, id) => {
+  const sendVoteToBackend = async (voteType, eventId) => {
     try {
       const response = await fetch("http://127.0.0.1:8000/api/votes/", {
         method: "POST",
@@ -36,7 +36,7 @@ const EventCard = ({
           Authorization: `Bearer ${access}`,
         },
         body: JSON.stringify({
-          event: id,
+          event: eventId,
           vote_type: voteType,
         }),
       });
@@ -53,27 +53,35 @@ const EventCard = ({
 
   const handleUpvote = () => {
     if (vote === "upvote") {
+      // Remove upvote
       setVote(null);
       setUpvotes((prev) => prev - 1);
-      sendVoteToBackend("positive", id);
+      sendVoteToBackend("neutral", id);
     } else {
+      // Add upvote and remove downvote if previously selected
       setVote("upvote");
       setUpvotes((prev) => prev + 1);
-      if (vote === "downvote") setDownvotes((prev) => prev - 1);
-      sendVoteToBackend("negative", id);
+      if (vote === "downvote") {
+        setDownvotes((prev) => prev - 1);
+      }
+      sendVoteToBackend("positive", id);
     }
   };
 
   const handleDownvote = () => {
     if (vote === "downvote") {
+      // Remove downvote
       setVote(null);
       setDownvotes((prev) => prev - 1);
-      sendVoteToBackend("negative", id);
+      sendVoteToBackend("neutral", id);
     } else {
+      // Add downvote and remove upvote if previously selected
       setVote("downvote");
       setDownvotes((prev) => prev + 1);
-      if (vote === "upvote") setUpvotes((prev) => prev - 1);
-      sendVoteToBackend("positive", id);
+      if (vote === "upvote") {
+        setUpvotes((prev) => prev - 1);
+      }
+      sendVoteToBackend("negative", id);
     }
   };
 

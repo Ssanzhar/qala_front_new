@@ -21,9 +21,12 @@ import { useContext, useEffect, useState } from "react";
 import "leaflet/dist/leaflet.css";
 import ThumbUpIcon from "@mui/icons-material/ThumbUp";
 import ThumbDownIcon from "@mui/icons-material/ThumbDown";
+import RoomIcon from "@mui/icons-material/Room";
 import { GlobalContext } from "../context/GlobalContext";
 import { data } from "../data/data";
 import { useAuth } from "../context/AuthProvider";
+import L from "leaflet";
+import ReactDOMServer from "react-dom/server";
 
 const MapUpdater = ({ marker }) => {
   const map = useMap();
@@ -66,14 +69,44 @@ const MapWithForm = () => {
     }
   }, [city]);
 
+  useEffect(() => {
+    const fetchMarkers = async () => {
+      try {
+        const response = await fetch(
+          `http://127.0.0.1:8000/api/filter-by-city/?city_id=${
+            city ? data[city].id : 2
+          }`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${access}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch events: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        setMarkers(result);
+      } catch (error) {
+        console.error("Error fetching markers:", error);
+      }
+    };
+
+    fetchMarkers();
+  }, [access, city]);
+
   const MapClickHandler = () => {
     useMapEvents({
       click(e) {
-        setFormData({
-          ...formData,
+        setFormData((prev) => ({
+          ...prev,
           latitude: e.latlng.lat,
           longitude: e.latlng.lng,
-        });
+        }));
         setFormOpen(true);
       },
     });
@@ -109,27 +142,20 @@ const MapWithForm = () => {
         body: formDataToSend,
       });
 
-      console.log(formDataToSend);
-      console.log(formData);
-
-      const data = await response.json();
-      console.log("Event created successfully", data);
-
-      if (data.ok) {
-        if (data.ok) {
-          const newMarker = {
-            name: formData.name,
-            description: formData.description,
-            latitude: formData.latitude,
-            longitude: formData.longitude,
-            image: formData.image,
-            city: formData.city,
-          };
-          setMarkers((prev) => [...prev, newMarker]);
-          console.log("Markers after addition: ", markers);
-        }
+      if (!response.ok) {
+        throw new Error("Failed to create event");
       }
 
+      const newMarker = {
+        name: formData.name,
+        description: formData.description,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        image: formData.image,
+        city: formData.city,
+      };
+
+      setMarkers((prev) => [...prev, newMarker]);
       setFormOpen(false);
       setFormData({
         name: "",
@@ -144,52 +170,58 @@ const MapWithForm = () => {
     }
   };
 
-  const sendVoteToBackend = async (voteType, id) => {
+  const handleVote = async (voteType) => {
     try {
       const response = await fetch("http://127.0.0.1:8000/api/votes/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          event: id,
-          vote_type: voteType === "positive" ? "positive" : "negative",
+          vote_type: voteType === "upvote" ? "positive" : "negative",
         }),
       });
 
-      if (response.ok) {
-        console.log("Vote successfully sent to the backend");
+      if (!response.ok) {
+        throw new Error("Failed to send vote to backend");
+      }
+
+      if (voteType === "upvote") {
+        setVote((prev) => (prev === "upvote" ? null : "upvote"));
+        setUpvotes((prev) => prev + (vote === "upvote" ? -1 : 1));
+        if (vote === "downvote") setDownvotes((prev) => prev - 1);
       } else {
-        console.error("Failed to send vote to the backend");
+        setVote((prev) => (prev === "downvote" ? null : "downvote"));
+        setDownvotes((prev) => prev + (vote === "downvote" ? -1 : 1));
+        if (vote === "upvote") setUpvotes((prev) => prev - 1);
       }
     } catch (error) {
       console.error("Error sending vote:", error);
     }
   };
 
-  const handleUpvote = () => {
-    if (vote === "upvote") {
-      setVote(null);
-      setUpvotes((prev) => prev - 1);
-      sendVoteToBackend("remove");
-    } else {
-      setVote("upvote");
-      setUpvotes((prev) => prev + 1);
-      if (vote === "downvote") setDownvotes((prev) => prev - 1);
-      sendVoteToBackend("upvote");
-    }
-  };
-
-  const handleDownvote = () => {
-    if (vote === "downvote") {
-      setVote(null);
-      setDownvotes((prev) => prev - 1);
-      sendVoteToBackend("remove");
-    } else {
-      setVote("downvote");
-      setDownvotes((prev) => prev + 1);
-      if (vote === "upvote") setUpvotes((prev) => prev - 1);
-      sendVoteToBackend("downvote");
-    }
-  };
+  const customIcon = L.divIcon({
+    className: "custom-icon",
+    html: ReactDOMServer.renderToString(
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "transparent",
+          width: "40px",
+          height: "40px",
+        }}
+      >
+        <RoomIcon
+          style={{
+            color: "#f50057",
+            fontSize: "40px",
+          }}
+        />
+      </div>
+    ),
+    iconSize: [40, 40],
+    iconAnchor: [20, 40],
+  });
 
   return (
     <ThemeProvider theme={theme}>
@@ -213,7 +245,11 @@ const MapWithForm = () => {
           <MapUpdater marker={marker} />
           <MapClickHandler />
           {markers.map((marker, index) => (
-            <Marker key={index} position={[marker.latitude, marker.longitude]}>
+            <Marker
+              key={index}
+              position={[marker.latitude, marker.longitude]}
+              icon={customIcon}
+            >
               <Popup>
                 <Typography variant="h6">Name: {marker.name}</Typography>
                 <Typography variant="body2">
@@ -221,7 +257,7 @@ const MapWithForm = () => {
                 </Typography>
                 {marker.image && (
                   <img
-                    src={URL.createObjectURL(marker.image)}
+                    src={marker.image}
                     alt={marker.name}
                     style={{ width: "200px", height: "auto", marginTop: "8px" }}
                   />
@@ -230,7 +266,6 @@ const MapWithForm = () => {
                   <Typography variant="h6">Votes: </Typography>
                   <IconButton
                     aria-label="like"
-                    onClick={handleUpvote}
                     color={vote === "upvote" ? "success" : "default"}
                   >
                     <ThumbUpIcon />
@@ -240,7 +275,6 @@ const MapWithForm = () => {
                   </Typography>
                   <IconButton
                     aria-label="dislike"
-                    onClick={handleDownvote}
                     color={vote === "downvote" ? "error" : "default"}
                   >
                     <ThumbDownIcon />
